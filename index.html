@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול תרומות</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f2; --surface: #ffffff; --border: #e4e2db; --text: #1a1a18; --muted: #8a8880;
+    --accent: #2d6a4f; --accent-light: #e8f5ef; --accent-hover: #235c43;
+    --danger: #c0392b; --danger-light: #fdf0ee; --warning: #e67e22; --warning-light: #fef5ec;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; }
+  .app { max-width: 680px; margin: 0 auto; }
+  .header { margin-bottom: 24px; }
+  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .alert-box { border-radius: 10px; padding: 12px 16px; font-size: 13px; }
+  .alert-month { background: var(--warning-light); border: 1px solid #f0c090; color: var(--warning); }
+  .alert-year { background: var(--danger-light); border: 1px solid #f0b0a0; color: var(--danger); }
+  .alert-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .alert-names { font-size: 12px; line-height: 1.6; }
+
+  .tabs { display: flex; gap: 4px; background: var(--border); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+  .tab { flex: 1; padding: 8px 4px; border: none; border-radius: 7px; background: transparent; font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.18s; }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow); }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  label span.optional { color: var(--muted); font-weight: 400; }
+  input, textarea, select { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Heebo', sans-serif; font-size: 15px; color: var(--text); background: var(--surface); transition: border-color 0.15s; outline: none; direction: rtl; }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .autocomplete-wrap { position: relative; }
+  .suggestions { position: absolute; top: calc(100% + 4px); right: 0; left: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); z-index: 100; max-height: 200px; overflow-y: auto; }
+  .suggestion-item { padding: 10px 14px; font-size: 14px; cursor: pointer; transition: background 0.1s; }
+  .suggestion-item:hover, .suggestion-item.highlighted { background: var(--accent-light); }
+
+  .amount-wrap { position: relative; }
+  .amount-wrap input { padding-left: 40px; }
+  .amount-symbol { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--muted); font-weight: 500; pointer-events: none; }
+
+  .quick-amounts { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .quick-btn { padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 20px; background: transparent; font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-family: 'Heebo', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s; margin-top: 4px; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .btn-sm { width: auto; padding: 6px 14px; font-size: 13px; border-radius: 6px; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; border: 1.5px solid var(--danger); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-light); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--accent); }
+  .toast.error { background: var(--danger); }
+
+  .contacts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 260px; overflow-y: auto; }
+  .contact-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fafaf8; }
+  .empty-state { text-align: center; color: var(--muted); font-size: 14px; padding: 20px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row input { flex: 1; min-width: 140px; }
+  .filter-row select { flex: 1; min-width: 120px; }
+
+  .donations-list { display: flex; flex-direction: column; gap: 10px; }
+  .donation-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; transition: border-color 0.15s; }
+  .donation-card:hover { border-color: var(--accent); }
+  .donation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .donation-name { font-weight: 600; font-size: 15px; }
+  .donation-amount { font-weight: 700; font-size: 16px; color: var(--accent); direction: ltr; }
+  .donation-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .donation-date { font-size: 12px; color: var(--muted); }
+  .donation-note { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .donation-actions { display: flex; gap: 6px; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .stat-box { background: var(--accent-light); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); direction: ltr; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .donor-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: #fafaf8; }
+  .donor-row-name { font-weight: 600; font-size: 14px; }
+  .donor-row-amount { font-weight: 700; color: var(--accent); font-size: 14px; direction: ltr; }
+  .donor-row-count { font-size: 12px; color: var(--muted); }
+  .chart-bar-bg { flex: 1; background: var(--border); border-radius: 4px; height: 8px; margin-top: 6px; width: 160px; }
+  .chart-bar-fill { background: var(--accent); border-radius: 4px; height: 8px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions .btn { margin-top: 0; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; margin-left: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .add-contact-row { display: flex; gap: 8px; }
+  .add-contact-row input { flex: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>ניהול תרומות</h1>
+    <p>מעקב תרומות קהילתי</p>
+  </div>
+
+  <div class="alerts" id="alerts-section"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('add')">הוספה</button>
+    <button class="tab" onclick="switchTab('list')">רשימה</button>
+    <button class="tab" onclick="switchTab('stats')">סטטיסטיקות</button>
+    <button class="tab" onclick="switchTab('contacts')">אנשי קשר</button>
+  </div>
+
+  <!-- ADD -->
+  <div id="tab-add">
+    <div class="card">
+      <div class="section-title">תרומה חדשה</div>
+      <div class="form-group">
+        <label>תאריך</label>
+        <input type="date" id="date-input">
+      </div>
+      <div class="form-group">
+        <label>שם התורם</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="donor-input" placeholder="הקלד שם..." autocomplete="off" oninput="onDonorInput()" onkeydown="onDonorKey(event)" onblur="hideSuggestions()">
+          <div class="suggestions" id="suggestions" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>סכום</label>
+        <div class="amount-wrap">
+          <input type="number" id="amount-input" placeholder="0" min="0">
+          <span class="amount-symbol">₽</span>
+        </div>
+        <div class="quick-amounts">
+          <button class="quick-btn" onclick="setAmount(100)">100</button>
+          <button class="quick-btn" onclick="setAmount(500)">500</button>
+          <button class="quick-btn" onclick="setAmount(1000)">1,000</button>
+          <button class="quick-btn" onclick="setAmount(2000)">2,000</button>
+          <button class="quick-btn" onclick="setAmount(5000)">5,000</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>הערה <span class="optional">(אופציונלי)</span></label>
+        <textarea id="note-input" placeholder="הוסף הערה..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="submit-btn" onclick="submitDonation()">שמור תרומה</button>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div id="tab-list" style="display:none">
+    <div class="card">
+      <div class="section-title">כל התרומות</div>
+      <div class="filter-row">
+        <input type="text" id="search-input" placeholder="🔍 חיפוש לפי שם..." oninput="applyFilters()">
+        <select id="month-filter" onchange="applyFilters()">
+          <option value="">כל החודשים</option>
+        </select>
+      </div>
+      <div id="donations-list"><div class="empty-state">טוען...</div></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div id="tab-stats" style="display:none">
+    <div class="card">
+      <div class="section-title">סטטיסטיקות כלליות</div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="divider"></div>
+      <div class="section-title">סה"כ לפי תורם</div>
+      <div id="donor-summary"></div>
+    </div>
+  </div>
+
+  <!-- CONTACTS -->
+  <div id="tab-contacts" style="display:none">
+    <div class="card">
+      <div class="section-title">ניהול אנשי קשר</div>
+      <div class="contacts-list" id="contacts-list"><div class="empty-state">טוען...</div></div>
+      <div class="divider"></div>
+      <label>הוסף איש קשר חדש</label>
+      <div class="add-contact-row" style="margin-top:8px">
+        <input type="text" id="new-contact-input" placeholder="שם מלא..." onkeydown="if(event.key==='Enter') addContact()">
+        <button class="btn btn-primary btn-sm" onclick="addContact()">הוסף</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">עריכת תרומה</div>
+    <input type="hidden" id="edit-row">
+    <div class="form-group"><label>שם התורם</label><input type="text" id="edit-name"></div>
+    <div class="form-group">
+      <label>סכום</label>
+      <div class="amount-wrap"><input type="number" id="edit-amount" min="0"><span class="amount-symbol">₽</span></div>
+    </div>
+    <div class="form-group"><label>הערה <span class="optional">(אופציונלי)</span></label><textarea id="edit-note"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEdit()">שמור שינויים</button>
+      <button class="btn btn-outline" onclick="closeModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title">מחיקת תרומה</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:8px">האם אתה בטוח שברצונך למחוק את התרומה של <strong id="delete-name"></strong>?</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="confirmDelete()">מחק</button>
+      <button class="btn btn-outline" onclick="closeDeleteModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgOwg02xqngqgYUJgmgM804xXJ3O3arGIgfZuj_IULoegSUSbBT_j61rOvoIMqdW4tAA/exec";
+
+let contacts = [];
+let donations = [];
+let suggestionIndex = -1;
+let deleteRowIndex = null;
+
+const today = new Date();
+const todayISO = today.toISOString().split('T')[0];
+document.getElementById('date-input').value = todayISO;
+
+loadContacts();
+loadDonations();
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast '+type+' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchTab(tab) {
+  ['add','list','stats','contacts'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['add','list','stats','contacts'][i]===tab);
+  });
+  if (tab==='stats') renderStats();
+}
+
+async function loadContacts() {
+  try { const res = await fetch(SCRIPT_URL+'?action=getContacts'); contacts = await res.json(); }
+  catch(e) { contacts = []; }
+  renderContacts();
+}
+
+function renderContacts() {
+  const list = document.getElementById('contacts-list');
+  if (!contacts.length) { list.innerHTML = '<div class="empty-state">אין אנשי קשר עדיין</div>'; return; }
+  list.innerHTML = contacts.map((c,i) => `
+    <div class="contact-item">
+      <span style="font-weight:500">${c}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeContact(${i})">הסר</button>
+    </div>`).join('');
+}
+
+async function addContact() {
+  const input = document.getElementById('new-contact-input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (contacts.includes(name)) { showToast('איש קשר כבר קיים','error'); return; }
+  try {
+    await fetch(SCRIPT_URL, {method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'addContact',name})});
+    contacts.push(name); contacts.sort((a,b)=>a.localeCompare(b,'he'));
+    input.value=''; renderContacts(); showToast('איש קשר נוסף!');
+  } catch(e) { showToast('שגיאה בהוספה','error'); }
+}
+
+async function removeContact(i) {
+  const name = contacts[i];
+  try {
+    await fetch(SCRIPT_URL, {method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'removeContact',name})});
+    contacts.splice(i,1); renderContacts(); showToast('איש קשר הוסר');
+  } catch(e) { showToast('שגיאה','error'); }
+}
+
+function onDonorInput() {
+  const val = document.getElementById('donor-input').value.trim();
+  const box = document.getElementById('suggestions');
+  suggestionIndex = -1;
+  if (!val) { box.style.display='none'; return; }
+  const filtered = contacts.filter(c=>c.includes(val));
+  if (!filtered.length) { box.style.display='none'; return; }
+  box.innerHTML = filtered.map(c=>`<div class="suggestion-item" onmousedown="selectSuggestion('${c}')">${c}</div>`).join('');
+  box.style.display='block';
+}
+function onDonorKey(e) {
+  const items = document.querySelectorAll('.suggestion-item');
+  if (e.key==='ArrowDown') suggestionIndex=Math.min(suggestionIndex+1,items.length-1);
+  else if (e.key==='ArrowUp') suggestionIndex=Math.max(suggestionIndex-1,0);
+  else if (e.key==='Enter'&&suggestionIndex>=0) { selectSuggestion(items[suggestionIndex].textContent); return; }
+  items.forEach((el,i)=>el.classList.toggle('highlighted',i===suggestionIndex));
+}
+function selectSuggestion(name) { document.getElementById('donor-input').value=name; document.getElementById('suggestions').style.display='none'; }
+function hideSuggestions() { setTimeout(()=>document.getElementById('suggestions').style.display='none',150); }
+function setAmount(val) { document.getElementById('amount-input').value=val; }
+
+async function submitDonation() {
+  const name = document.getElementById('donor-input').value.trim();
+  const amount = document.getElementById('amount-input').value.trim();
+  const note = document.getElementById('note-input').value.trim();
+  const dateVal = document.getElementById('date-input').value;
+  const dateFormatted = dateVal ? new Date(dateVal).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  if (!name) { showToast('נא להכניס שם תורם','error'); return; }
+  if (!amount||isNaN(amount)||Number(amount)<=0) { showToast('נא להכניס סכום תקין','error'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true; btn.innerHTML='שומר... <span class="spinner"></span>';
+  try {
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'add',name,amount:Number(amount),note,date:dateFormatted})});
+    showToast('התרומה נשמרה בהצלחה! ✓');
+    document.getElementById('donor-input').value='';
+    document.getElementById('amount-input').value='';
+    document.getElementById('note-input').value='';
+    document.getElementById('date-input').value=todayISO;
+    await loadDonations();
+  } catch(e) { showToast('שגיאה בשמירה','error'); }
+  btn.disabled=false; btn.textContent='שמור תרומה';
+}
+
+async function loadDonations() {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const rows = await res.json();
+    donations = (!rows||rows.length<=1) ? [] :
+      rows.slice(1).map((r,i)=>({row:i,date:r[0]||'',name:r[1]||'',amount:Number(r[2])||0,note:r[3]||''})).reverse();
+  } catch(e) { donations=[]; }
+  renderDonationsList(donations);
+  populateMonthFilter();
+  renderAlerts();
+}
+
+function populateMonthFilter() {
+  const sel = document.getElementById('month-filter');
+  const months = new Set();
+  donations.forEach(d => { if(d.date){const p=d.date.split('.');if(p.length===3)months.add(p[1]+'.'+p[2]);} });
+  const current = sel.value;
+  sel.innerHTML = '<option value="">כל החודשים</option>';
+  [...months].sort().reverse().forEach(m => {
+    const [mm,yyyy]=m.split('.');
+    const names=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    sel.innerHTML+=`<option value="${m}" ${current===m?'selected':''}>${names[parseInt(mm)-1]} ${yyyy}</option>`;
+  });
+}
+
+function applyFilters() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  const month = document.getElementById('month-filter').value;
+  let filtered = donations;
+  if (search) filtered=filtered.filter(d=>d.name.toLowerCase().includes(search));
+  if (month) filtered=filtered.filter(d=>{const p=d.date.split('.');return p.length===3&&(p[1]+'.'+p[2])===month;});
+  renderDonationsList(filtered);
+}
+
+function renderDonationsList(list) {
+  const container = document.getElementById('donations-list');
+  if (!list||!list.length) { container.innerHTML='<div class="empty-state">אין תרומות להצגה</div>'; return; }
+  const total = list.reduce((s,d)=>s+d.amount,0);
+  container.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:12px">${list.length} תרומות • סה"כ <strong style="color:var(--accent)">₽${total.toLocaleString('he-IL')}</strong></div>`;
+  const wrap=document.createElement('div'); wrap.className='donations-list';
+  list.forEach(d=>{
+    const el=document.createElement('div'); el.className='donation-card';
+    el.innerHTML=`
+      <div class="donation-header">
+        <span class="donation-name">${d.name}</span>
+        <span class="donation-amount">₽${d.amount.toLocaleString('he-IL')}</span>
+      </div>
+      ${d.note?`<div class="donation-note">${d.note}</div>`:''}
+      <div class="donation-meta">
+        <span class="donation-date">${d.date}</span>
+        <div class="donation-actions">
+          <button class="btn btn-outline btn-sm" onclick="openEdit(${d.row})">עריכה</button>
+          <button class="btn btn-danger btn-sm" onclick="openDelete(${d.row},'${d.name.replace(/'/g,"\\'")}')">מחק</button>
+        </div>
+      </div>`;
+    wrap.appendChild(el);
+  });
+  container.appendChild(wrap);
+}
+
+function renderAlerts() {
+  const section = document.getElementById('alerts-section');
+  section.innerHTML='';
+  const now=new Date();
+  const tm=String(now.getMonth()+1).padStart(2,'0'), ty=String(now.getFullYear());
+  const lm=String(now.getMonth()===0?12:now.getMonth()).padStart(2,'0');
+  const lmy=now.getMonth()===0?String(now.getFullYear()-1):ty;
+  const ly=String(now.getFullYear()-1);
+
+  const setOf=(mm,yy)=>new Set(donations.filter(d=>{const p=d.date.split('.');return p.length===3&&p[1]===mm&&p[2]===yy;}).map(d=>d.name));
+  const setOfYear=(yy)=>new Set(donations.filter(d=>{const p=d.date.split('.');return p.length===3&&p[2]===yy;}).map(d=>d.name));
+
+  const thisMonth=setOf(tm,ty), lastMonth=setOf(lm,lmy);
+  const thisYear=setOfYear(ty), lastYear=setOfYear(ly);
+
+  const missedMonth=[...lastMonth].filter(n=>!thisMonth.has(n));
+  const missedYear=[...lastYear].filter(n=>!thisYear.has(n));
+
+  if (missedMonth.length) section.innerHTML+=`
+    <div class="alert-box alert-month">
+      <div class="alert-title">⚠️ תרמו חודש שעבר ועדיין לא החודש (${missedMonth.length})</div>
+      <div class="alert-names">${missedMonth.join(' • ')}</div>
+    </div>`;
+  if (missedYear.length) section.innerHTML+=`
+    <div class="alert-box alert-year">
+      <div class="alert-title">🔴 תרמו ${ly} ועדיין לא ${ty} (${missedYear.length})</div>
+      <div class="alert-names">${missedYear.join(' • ')}</div>
+    </div>`;
+}
+
+function renderStats() {
+  const total=donations.reduce((s,d)=>s+d.amount,0);
+  const avg=donations.length?Math.round(total/donations.length):0;
+  const now=new Date();
+  const tm=String(now.getMonth()+1).padStart(2,'0'), ty=String(now.getFullYear());
+  const monthTotal=donations.filter(d=>{const p=d.date.split('.');return p.length===3&&p[1]===tm&&p[2]===ty;}).reduce((s,d)=>s+d.amount,0);
+  const uniqueDonors=new Set(donations.map(d=>d.name)).size;
+
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-box"><div class="stat-value">₽${total.toLocaleString('he-IL')}</div><div class="stat-label">סה"כ כל הזמנים</div></div>
+    <div class="stat-box"><div class="stat-value">${donations.length}</div><div class="stat-label">מספר תרומות</div></div>
+    <div class="stat-box"><div class="stat-value">₽${monthTotal.toLocaleString('he-IL')}</div><div class="stat-label">החודש הנוכחי</div></div>
+    <div class="stat-box"><div class="stat-value">${uniqueDonors}</div><div class="stat-label">תורמים שונים</div></div>
+  `;
+
+  const byDonor={};
+  donations.forEach(d=>{
+    if(!byDonor[d.name])byDonor[d.name]={total:0,count:0};
+    byDonor[d.name].total+=d.amount; byDonor[d.name].count++;
+  });
+  const sorted=Object.entries(byDonor).sort((a,b)=>b[1].total-a[1].total);
+  const maxVal=sorted.length?sorted[0][1].total:1;
+  const summary=document.getElementById('donor-summary');
+  if(!sorted.length){summary.innerHTML='<div class="empty-state">אין נתונים</div>';return;}
+  summary.innerHTML=sorted.map(([name,data])=>`
+    <div class="donor-row">
+      <div>
+        <div class="donor-row-name">${name}</div>
+        <div class="donor-row-count">${data.count} תרומות</div>
+        <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${Math.round(data.total/maxVal*100)}%"></div></div>
+      </div>
+      <div class="donor-row-amount">₽${data.total.toLocaleString('he-IL')}</div>
+    </div>`).join('');
+}
+
+function openEdit(rowIndex) {
+  const d=donations.find(x=>x.row===rowIndex); if(!d)return;
+  document.getElementById('edit-row').value=rowIndex;
+  document.getElementById('edit-name').value=d.name;
+  document.getElementById('edit-amount').value=d.amount;
+  document.getElementById('edit-note').value=d.note;
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('edit-modal').classList.remove('open');}
+async function saveEdit() {
+  const row=document.getElementById('edit-row').value;
+  const name=document.getElementById('edit-name').value.trim();
+  const amount=document.getElementById('edit-amount').value.trim();
+  const note=document.getElementById('edit-note').value.trim();
+  if(!name||!amount){showToast('נא למלא שם וסכום','error');return;}
+  const d=donations.find(x=>x.row===Number(row));
+  try {
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'update',row:Number(row),name,amount:Number(amount),note,date:d?d.date:''})});
+    showToast('התרומה עודכנה! ✓'); closeModal(); await loadDonations();
+  } catch(e){showToast('שגיאה בעדכון','error');}
+}
+
+function openDelete(rowIndex,name) {
+  deleteRowIndex=rowIndex;
+  document.getElementById('delete-name').textContent=name;
+  document.getElementById('delete-modal').classList.add('open');
+}
+function closeDeleteModal(){document.getElementById('delete-modal').classList.remove('open');deleteRowIndex=null;}
+async function confirmDelete() {
+  if(deleteRowIndex===null)return;
+  try {
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'delete',row:deleteRowIndex})});
+    showToast('התרומה נמחקה'); closeDeleteModal(); await loadDonations();
+  } catch(e){showToast('שגיאה במחיקה','error');}
+}
+
+document.getElementById('edit-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('delete-modal').addEventListener('click',function(e){if(e.target===this)closeDeleteModal();});
+</script>
+</body>
+</html>
